@@ -32,6 +32,12 @@ La aplicación puede publicarse como sitio estático mediante GitHub Pages,
 Netlify, Cloudflare Pages o un servicio equivalente que proporcione HTTPS.
 
 - Android: abre la web con Chrome y selecciona **Instalar aplicación**.
+  En la primera visita, espera a que termine de cargar, recarga la página y
+  vuelve a abrir el menú de Chrome. GitHub Pages necesita esa segunda
+  navegación para que el service worker controle la página y Chrome pueda
+  ofrecer la instalación como aplicación. Si solo aparece **Añadir a pantalla
+  de inicio**, elimina ese acceso directo, comprueba que la dirección empieza
+  por `https://` y vuelve a cargar la página.
 - iPhone/iPad: abre la web con Safari y selecciona
   **Compartir > Añadir a pantalla de inicio**.
 
