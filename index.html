@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#10241f">
+    <meta name="description" content="Panel de combate offline para Ace of Spades">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ace of Spades">
+    <title>Ace of Spades · Panel de combate</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Panel de combate</p>
+          <h1>Ace <span>of</span> Spades</h1>
+        </div>
+        <div class="topbar__actions">
+          <button class="button install-button" id="install-button" type="button" hidden>
+            Instalar
+          </button>
+          <button class="button button--ghost guide-button" id="damage-guide-button" type="button">
+            <span aria-hidden="true">?</span>
+            Tabla de daño
+          </button>
+          <button class="icon-button" id="undo-button" type="button" aria-label="Deshacer último cambio" disabled>
+            <span aria-hidden="true">↶</span>
+          </button>
+          <button class="button button--ghost" id="reset-button" type="button">Nueva partida</button>
+        </div>
+      </header>
+
+      <section class="encounter-bar" aria-label="Enemigo actual">
+        <div>
+          <span class="encounter-bar__number" id="encounter-number">Enemigo 1</span>
+          <h2 id="enemy-name">Sin preparar</h2>
+        </div>
+        <div class="encounter-bar__actions">
+          <span class="status-badge status-badge--idle" id="combat-status">Prepara el combate</span>
+          <button class="button button--small" id="setup-button" type="button">Preparar enemigo</button>
+        </div>
+      </section>
+
+      <section class="board" aria-label="Contadores del combate">
+        <article class="counter-panel counter-panel--health">
+          <div class="counter-panel__heading">
+            <div class="sheriff-star" aria-hidden="true">★</div>
+            <div>
+              <p class="label">Vida restante</p>
+              <p class="hint">Vida del enemigo actual</p>
+            </div>
+          </div>
+
+          <div class="counter-panel__controls">
+            <button class="counter-button" type="button" data-action="change" data-counter="enemyHealth" data-amount="-1" aria-label="Restar una vida">−</button>
+            <output id="enemyHealth-output" class="counter-value counter-value--health" aria-live="polite">0</output>
+            <button class="counter-button" type="button" data-action="change" data-counter="enemyHealth" data-amount="1" aria-label="Sumar una vida">+</button>
+          </div>
+
+          <div class="quick-actions" aria-label="Correcciones rápidas de vida">
+            <button type="button" data-action="change" data-counter="enemyHealth" data-amount="-10">−10</button>
+            <button type="button" data-action="change" data-counter="enemyHealth" data-amount="-5">−5</button>
+            <button type="button" data-action="change" data-counter="enemyHealth" data-amount="5">+5</button>
+            <button type="button" data-action="change" data-counter="enemyHealth" data-amount="10">+10</button>
+          </div>
+
+          <button class="primary-action" id="play-hand-button" type="button">
+            <span aria-hidden="true">♠</span>
+            Realizar jugada
+          </button>
+        </article>
+
+        <article class="counter-panel">
+          <div class="counter-panel__heading">
+            <div class="revolver-icon" aria-hidden="true">
+              <span>●</span><span>●</span><span>●</span><span>●</span><span>●</span><span>●</span>
+            </div>
+            <div>
+              <p class="label">Jugadas restantes</p>
+              <p class="hint">Cada jugada consume una bala</p>
+            </div>
+          </div>
+          <div class="counter-panel__controls">
+            <button class="counter-button" type="button" data-action="change" data-counter="bullets" data-amount="-1" aria-label="Restar una jugada">−</button>
+            <output id="bullets-output" class="counter-value" aria-live="polite">0</output>
+            <button class="counter-button" type="button" data-action="change" data-counter="bullets" data-amount="1" aria-label="Sumar una jugada">+</button>
+          </div>
+        </article>
+
+        <article class="counter-panel">
+          <div class="counter-panel__heading">
+            <div class="cards-icon" aria-hidden="true">
+              <span>♠</span><span>A</span>
+            </div>
+            <div>
+              <p class="label">Descartes / renovaciones</p>
+              <p class="hint">Cada acción consume un uso</p>
+            </div>
+          </div>
+          <div class="counter-panel__controls counter-panel__controls--compact">
+            <button class="counter-button" type="button" data-action="change" data-counter="draws" data-amount="-1" aria-label="Restar un descarte">−</button>
+            <output id="draws-output" class="counter-value" aria-live="polite">0</output>
+            <button class="counter-button" type="button" data-action="change" data-counter="draws" data-amount="1" aria-label="Sumar un descarte">+</button>
+          </div>
+          <div class="resource-actions">
+            <button class="resource-button" id="discard-button" type="button">
+              <span aria-hidden="true">↻</span>
+              <strong>Descartar y robar</strong>
+              <small>Roba hasta tener 8 cartas</small>
+            </button>
+            <button class="resource-button" id="renew-button" type="button">
+              <span aria-hidden="true">⤨</span>
+              <strong>Renovar mazo</strong>
+              <small>Mezcla el descarte y el mazo</small>
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <aside class="result-banner" id="result-banner" hidden>
+        <div>
+          <p class="eyebrow" id="result-kicker">Combate finalizado</p>
+          <h2 id="result-title">Enemigo derrotado</h2>
+          <p id="result-message"></p>
+        </div>
+        <button class="button" id="next-enemy-button" type="button">Siguiente enemigo</button>
+      </aside>
+
+      <footer>
+        <span><i class="connection-dot" id="connection-dot"></i><span id="connection-status">Disponible sin conexión</span></span>
+        <span id="status-message" role="status" aria-live="polite"></span>
+      </footer>
+    </main>
+
+    <dialog id="setup-dialog">
+      <form id="setup-form">
+        <div class="dialog-heading">
+          <div class="dialog-star" aria-hidden="true">★</div>
+          <div>
+            <p class="eyebrow">Nuevo combate</p>
+            <h2>Preparar enemigo</h2>
+          </div>
+        </div>
+        <label class="field">
+          <span>Nombre <small>(opcional)</small></span>
+          <input id="setup-name" name="enemyName" type="text" maxlength="30" placeholder="Ej. El forajido">
+        </label>
+        <div class="field-grid">
+          <label class="field">
+            <span>Vida</span>
+            <input id="setup-health" name="enemyHealth" type="number" inputmode="numeric" min="1" max="99" value="20" required>
+          </label>
+          <label class="field">
+            <span>Jugadas</span>
+            <input id="setup-bullets" name="bullets" type="number" inputmode="numeric" min="1" max="9" value="6" required>
+          </label>
+          <label class="field">
+            <span>Descartes</span>
+            <input id="setup-draws" name="draws" type="number" inputmode="numeric" min="0" max="9" value="2" required>
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button class="button button--ghost" type="button" data-close-dialog="setup-dialog">Cancelar</button>
+          <button class="button" type="submit">Comenzar combate</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="hand-dialog">
+      <form id="hand-form">
+        <div class="dialog-heading">
+          <div class="playing-card-icon" aria-hidden="true">A♠</div>
+          <div>
+            <p class="eyebrow">Resolver duelo</p>
+            <h2>Realizar jugada</h2>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Combinación</span>
+          <select id="hand-type" name="handType">
+            <option value="1">Pareja · 1 daño</option>
+            <option value="2">Doble pareja · 2 daños</option>
+            <option value="3">Trío · 3 daños</option>
+            <option value="4">Escalera · 4 daños</option>
+            <option value="5">Color · 5 daños</option>
+            <option value="6">Full · 6 daños</option>
+            <option value="8">Póker · 8 daños</option>
+            <option value="10">Escalera de color · 10 daños</option>
+            <option value="12">Repóker · 12 daños</option>
+          </select>
+        </label>
+
+        <div class="field-grid field-grid--bonuses">
+          <label class="field">
+            <span>Figuras <small>+1 c/u</small></span>
+            <input id="figure-bonus" name="figures" type="number" inputmode="numeric" min="0" max="5" value="0">
+          </label>
+          <label class="field">
+            <span>Ases <small>+3 c/u</small></span>
+            <input id="ace-bonus" name="aces" type="number" inputmode="numeric" min="0" max="5" value="0">
+          </label>
+          <label class="field">
+            <span>Otros bonos</span>
+            <input id="other-bonus" name="otherBonus" type="number" inputmode="numeric" min="0" max="99" value="0">
+          </label>
+        </div>
+
+        <div class="damage-preview">
+          <span>Daño total</span>
+          <output id="damage-preview">1</output>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="button button--ghost" type="button" data-close-dialog="hand-dialog">Cancelar</button>
+          <button class="button" type="submit">Aplicar daño</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="guide-dialog" id="damage-guide-dialog">
+      <div class="guide-dialog__content">
+        <header class="guide-dialog__heading">
+          <div>
+            <p class="eyebrow">Ayuda de juego</p>
+            <h2>Combinaciones y daño</h2>
+            <p>El daño indicado es el valor base de la jugada.</p>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog="damage-guide-dialog" aria-label="Cerrar tabla de daño">×</button>
+        </header>
+
+        <div class="hands-guide">
+          <article class="hand-guide">
+            <div class="hand-guide__title">
+              <h3>Pareja</h3>
+              <strong>1 <span>daño</span></strong>
+            </div>
+            <div class="card-example" aria-label="Ejemplo: dos jotas y tres cartas diferentes">
+              <span>J<small>♣</small></span><span class="red-card">J<small>♦</small></span><span>2<small>♠</small></span><span class="red-card">5<small>♥</small></span><span>9<small>♣</small></span>
+            </div>
+            <p>2 cartas del mismo valor.</p>
+          </article>
+
+          <article class="hand-guide">
+            <div class="hand-guide__title">
+              <h3>Doble pareja</h3>
+              <strong>2 <span>daños</span></strong>
+            </div>
+            <div class="card-example" aria-label="Ejemplo: dos nueves, dos treses y una carta diferente">
+              <span>9<small>♠</small></span><span class="red-card">9<small>♥</small></span><span>3<small>♣</small></span><span class="red-card">3<small>♦</small></span><span>K<small>♠</small></span>
+            </div>
+            <p>2 parejas de distinto valor.</p>
+          </article>
+
+          <article class="hand-guide">
+            <div class="hand-guide__title">
+              <h3>Trío</h3>
+              <strong>3 <span>daños</span></strong>
+            </div>
+            <div class="card-example" aria-label="Ejemplo: tres seises y dos cartas diferentes">
+              <span>6<small>♠</small></span><span class="red-card">6<small>♥</small></span><span>6<small>♣</small></span><span class="red-card">2<small>♦</small></span><span>Q<small>♠</small></span>
+            </div>
+            <p>3 cartas del mismo valor.</p>
+          </article>
+
+          <article class="hand-guide">
+            <div class="hand-guide__title">
+              <h3>Escalera</h3>
+              <strong>4 <span>daños</span></strong>
+            </div>
+            <div class="card-example" aria-label="Ejemplo: tres, cuatro, cinco, seis y siete">
+              <span>3<small>♠</small></span><span class="red-card">4<small>♥</small></span><span>5<small>♣</small></span><span class="red-card">6<small>♦</small></span><span>7<small>♠</small></span>
+            </div>
+            <p>5 valores consecutivos de cualquier palo.</p>
+          </article>
+
+          <article class="hand-guide">
+            <div class="hand-guide__title">
+              <h3>Color</h3>
+              <strong>5 <span>daños</span></strong>
+            </div>
+            <div class="card-example" aria-label="Ejemplo: cinco cartas de corazones">
+              <span class="red-card">2<small>♥</small></span><span class="red-card">5<small>♥</small></span><span class="red-card">6<small>♥</small></span><span class="red-card">9<small>♥</small></span><span class="red-card">10<small>♥</small></span>
+            </div>
+            <p>5 cartas del mismo palo.</p>
+          </article>
+
+          <article class="hand-guide">
+            <div class="hand-guide__title">
+              <h3>Full</h3>
+              <strong>6 <span>daños</span></strong>
+            </div>
+            <div class="card-example" aria-label="Ejemplo: tres cuatros y dos jotas">
+              <span>4<small>♠</small></span><span class="red-card">4<small>♥</small></span><span>4<small>♣</small></span><span class="red-card">J<small>♦</small></span><span>J<small>♠</small></span>
+            </div>
+            <p>Un trío y una pareja.</p>
+          </article>
+
+          <article class="hand-guide">
+            <div class="hand-guide__title">
+              <h3>Póker</h3>
+              <strong>8 <span>daños</span></strong>
+            </div>
+            <div class="card-example" aria-label="Ejemplo: cuatro ases y una carta diferente">
+              <span>A<small>♠</small></span><span class="red-card">A<small>♥</small></span><span>A<small>♣</small></span><span class="red-card">A<small>♦</small></span><span>8<small>♠</small></span>
+            </div>
+            <p>4 cartas del mismo valor.</p>
+          </article>
+
+          <article class="hand-guide">
+            <div class="hand-guide__title">
+              <h3>Escalera de color</h3>
+              <strong>10 <span>daños</span></strong>
+            </div>
+            <div class="card-example" aria-label="Ejemplo: ocho, nueve, diez, jota y reina de tréboles">
+              <span>8<small>♣</small></span><span>9<small>♣</small></span><span>10<small>♣</small></span><span>J<small>♣</small></span><span>Q<small>♣</small></span>
+            </div>
+            <p>Escalera con todas las cartas del mismo palo.</p>
+          </article>
+
+          <article class="hand-guide">
+            <div class="hand-guide__title">
+              <h3>Repóker</h3>
+              <strong>12 <span>daños</span></strong>
+            </div>
+            <div class="card-example" aria-label="Ejemplo: cuatro dieces y el joker">
+              <span>10<small>♠</small></span><span class="red-card">10<small>♥</small></span><span>10<small>♣</small></span><span class="red-card">10<small>♦</small></span><span class="joker-card">★<small>JK</small></span>
+            </div>
+            <p>4 cartas iguales y el Joker.</p>
+          </article>
+        </div>
+
+        <aside class="bonus-guide">
+          <div>
+            <strong>J · Q · K</strong>
+            <span>Cada figura suma <b>+1 de daño</b>.</span>
+          </div>
+          <div>
+            <strong>A</strong>
+            <span>Cada as suma <b>+3 de daño</b>.</span>
+          </div>
+        </aside>
+      </div>
+    </dialog>
+
+    <dialog id="reset-dialog">
+      <form method="dialog">
+        <div class="dialog-heading">
+          <div class="dialog-star" aria-hidden="true">★</div>
+          <div>
+            <p class="eyebrow">Reiniciar</p>
+            <h2>¿Nueva partida?</h2>
+          </div>
+        </div>
+        <p class="dialog-copy">Se borrará el enemigo actual y todos los contadores volverán a cero.</p>
+        <div class="dialog-actions">
+          <button class="button button--ghost" value="cancel">Cancelar</button>
+          <button class="button" id="confirm-reset" value="confirm">Reiniciar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
